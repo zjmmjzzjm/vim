@@ -1,0 +1,286 @@
+
+vim笔记
+ 
+
+gUU 大写转换
+guu 小写转换
+:set nowrap 不自动拆行
+'. 跳回最后的编辑行
+`. 跳回最后的编辑点
+g; 跳到比较旧的编辑位置
+g, 比较新的编辑位置
+:changes 打出改变列表
+:ju(mps) 列出跳转轨迹
+:history 列出历史记录
+:his c 命令行历史
+:his s 搜索历史
+q/ 搜索命令的历史窗口
+:<C-F> 历史窗口
+<LEADER> 右斜杠(\)
+<BAR> 管道符号(|)
+<BACKSPACE> 退格
+<SILENT> 不回显
+处理部分行如例:
+1,10wirte! 写入第一行至第十行到当前编辑的文件
+1,10s/^#//g 去掉第一行至第十行的#(注释符)
+
+定义函数
+function! functionname [range]
+ " 当加入range时表示函数处理区域
+ " a:firstline 表示开始行
+ " a:lastline 表示最后行
+ " 加叹号表示重新定义这个函数防止多次加载
+endfunction
+
+" 一个简单的计算器
+imap <silent> <C-C> <C-R>=string(eval(input("Calculate:")))<CR>
+
+" 计算从[n],[n2]之间的词数量
+function! Count_words() range
+ let lnum = a:firstline
+ let n = 0
+ while lnum <= a:lastline
+   let n = n + len(split(getline(lnum)))
+   let lnum = lnum + 1
+ endwhile
+ echo "found " . n . " words"
+endfunction
+
+function Number()
+ echo "line " . line(".") . " contains: " . getline(".")
+endfunction
+
+" 这是个函数参数例子, 函数参数以 a:1 a:2 a:3 a... 延续到20个 
+function Show(start, ...)
+ " echohl 命令使使用echo高亮 echohl None关闭高亮
+ echohl Title
+ echo "Show is " . a:start
+ echohl None
+ let index = 1
+ while index <= a:0
+   echo " Arg " . index . " is " . a:{index}
+   let index = index + 1
+ endwhile
+ echo ""
+endfunction
+
+let alist = ['one', 'two', 'three']
+for n in alist
+ echo n
+endfor
+
+function! Enter_date()
+ for line in getline(1, 20)
+   if line =~ "Date: "
+    echo matchstr(line, 'Date: \zs.*')
+   endif
+ endfor
+endfunction
+常用VIM事件格式
+autocmd EventName filename_pattern :command
+事件名称是 78 种有效vim事件名称
+文件名称模式的语法各普通的shell模式很相似,但又有所区别
+命令可以是任何有将我 vim 命令,包括vimscript 的函数调用
+
+自动命令组
+augroup GROUPNAME
+"autocommand specifications here
+augroup END
+GROUPNAME 可以是一系列非空白的字符,除了"end"或者"END",这是保留用于一个
+组的
+
+" 停用自动命令
+autocmd! 命令
+例如
+删除 Unfocussed 组中所有txt文件的所有事件
+autocmd! Unfocussed * *.txt
+删除 Unfocussed 组中所有txt文件的FocusLost事件
+autocmd! Unfocussed FocusLost *.txt
+删除 Unfocussed 组中所有FocusLost事件处理
+autocmd! Unfocussed FocusLost
+删除 Unfocussed 组所有事件处理
+autocmd! Unfocussed
+删除当前组中的所有事件处理
+autocmd!
+
+ 
+
+" 当编辑*.txt的vim窗口重获焦点时在底部打印一段话
+autocmd FocusGained *.txt :echo 'Welcome back,' . $USER . '! You look,' . $USER . '!You look great!'
+"
+" 当编辑*.txt的vimp窗口重获焦点时突出显示光标所在行1秒钟
+autocmd FocusGained *.txt :set cursorline
+autocmd FocusGained *.txt :redraw
+autocmd FocusGained *.txt :sleep 1
+autocmd FocusGained *.txt :set nocursorline
+
+" 退出编辑窗口自动保存的命令
+autocmd FocusLost *.txt :if &modified && g:autosave_on_focus_change
+autocmd FocusLost *.txt :write
+autocmd FocusLost *.txt :echo "Autosaved file while you were absent"
+autocmd FocusLost *.txt :endif
+
+" 简洁的处理多行自动命令的方法
+function! Highlight_cursor()
+ set cursorline
+ redraw
+ sleep 1
+ set nocursorline
+endfunction
+
+function! Autosave()
+ if &modified
+        g:autosave_on_focus_change
+   write
+   echo "Autosave file while you were absent"
+ endif
+endfunction
+
+autocmd FocusGained *.txt :call Highlight_cursor()
+autocmd FocusLost *.txt :call Autosave()
+
+" 响应FocusLost事件的自动命令组
+augroup Defocus
+ autocmd FocusLost *.txt :call AutoSave()
+ autocmd FocusLost *.p[ly] :call Checkpoint_sourcecoed()
+ autocmd FocusLost *.doc :call Reformat_current_para()
+augroup END
+" 把单独的文件类型的自动命令放入一个组
+augroup TextEvents
+ autocmd FocusGained *.txt :call Highlight_cursor()
+ autocmd FocusLost *.txt :call Autosave()
+augroup END
+ 
+" 在添加新的自动命令之前保证这个级是空的
+augroup Unfocussed
+ autocmd!
+ autocmd FocusLost *.p[ly] :call Checkpoint_sourcecoed()
+ autocmd FocusLost *.doc :call Reformat_current_para()
+augroup END
+
+" 自动格式化代码
+augroup CodeFormatters
+ autocmd!
+ " 在事件列表中不能有空格,在文件pattern中也允许用逗号(",")分隔
+ " "%"指的是接收文件的全部内部
+ " "!"把它排出到指定的外部程序,然后将每个程序的输出粘贴回缓冲区
+ " 替换原用的内容 :silent 表示不显示提示
+ autocmd BufReadPost,FileReadPost *.py :silent %!PythonTidy.py
+ autocmd BufReadPost,FileReadPost *.p[lm] :silent %!perltidy -q
+ autocmd BufReadPost,FileReadPost *.xml :silent %!xmlpp /t /c /n
+ autocmd BufReadPost,FileReadPost *.[ch] :silent %!indent
+augroup END
+
+" 更新时间戳函数
+function! UpdateTimestamp()
+ '[,']s/This file last updated: \zs.*/\=strftime("%c")/
+endfunction
+augroup Timestamping
+ autocmd!
+ autocmd BufWritePre,FileWritePre,FileAppendPre * :call UpdateTimeStamp()
+augroup END
+
+" vim: syntax=vim
+
+
+===============================================================================
+有些人习惯用纯文本工作: 记笔记, 写mail, 写function spec. 纯文本有纯文本的好处,
+例如, 方便, 兼容性强, 占用空间小. 但是它的缺点也同样明显, 没有格式, 没有颜色和
+高亮, 不能显示图片等. 但是vim的出现几乎可以弥补这些缺点了, 多种多样的插件使Vim
+也开始有了像Office那样强大的文本处理能力. 本文介绍几个有关纯文本的插件, 将你的
+vim打造成超级纯文本浏览器
+
+1. Plain Text Browser
+
+"纯文本浏览器"是为Vim写的一个方便阅读和浏览纯文本的插件. 该插件使你的纯文本也有
+语法高亮, 方便阅读; 同时它可以自动生成文档的目录树, 点击就可实现跳转, 方便浏览.
+如果你用过类似RFCreader一类的软件, 那么这个插件就是让所有的文本文件里都可以用
+Vim实现RFCreader一类的功能, 而且多了一个语法高亮的功能.
+
+http://www.vim.org/scripts/script.php?script_id=2899
+
+Description:
+
+The "Plain Text Browser" plugin give Vim the ability to show the document
+structure and highlight in plain text.
+
+中文介绍:
+
+http://guoyoooping.blog.163.com/blog/st ... 2389/edit/
+
+2. Utl
+
+使普通的文本文件具有超级链接功能, 使用该插件可以在文本文件里实现URL, footnotes
+等链接的跳转; < 安装>: 用vim打开utl_3_0a.vba, 然后执行":so %"即可; < 使用>: 在
+相应的URL上执行 ":Utl"即可跳转到URL, 图片(支持相对路径和绝对路径), 详情请参考帮
+助文件"help Utl". 缺点是该版本好像只能在win32的版本才能使用.
+
+http://www.vim.org/scripts/script.php?script_id=293
+
+It brings the benefits of URL-based hyperlinking to plain text, extending the
+URL syntax for plain text needs, in accordance with the RFC 2396 (towards
+current RFC 3986) URL specification.
+
+=========================================================================
+http://www.vim.org/scripts/index.php
+ Align
+ 一个对齐的插件,用来排版,面对一堆乱七八糟的代码时,用来对齐代码,功能强大,不过用到的机会不多
+ 
+http://www.vim.org/scripts/script.php?script_id=294
+ 
+[/url]
+ how to use :
+ [url=http://mysite.verizon.net/astronaut/vim/align.html#Examples]http://mysite.verizon.net/astronaut/vim/align.html#Examples
+ Mru
+ 给vim增加MRU功能,也就是保留最近打开的文件记录,:MRU打开,q退出,很方便
+ NERD_comments
+ 功能强大的代码注释工具,用来注释或者取消注释,支持很多语言,可以对文本块操作,写代码离不了,呵呵
+ 最常用到的快捷键是\c
+ a.vim
+ 在.c/.h之间切换,写代码必备
+ bufexplorer.vim
+ 列出当前打开的buffer,可以很容易的切换到和删除选定的buffer,必备插件之一
+ c.vim
+ c/c++ support,让你用编写c/c++程序时如虎添翼,有很多贴心的功能,每个功能都有快捷键
+ ,不过一部分和NERD_comments冲突
+ 如果经常编写一些单文件的c程序,但是不想写makefile,用这个,他帮你完成,F9编译并链接,
+ ctrl-F9运行
+ calendar.vim
+ 日历插件,有了它,用vim来写日记很方便
+ csExplorer.vim
+ color theme浏览插件,列出所有的vim color theme到一个列表中,选中后按回车即可应用相
+ 应的color theme,试验color theme时再也不用一次次输入:color theme_name了,从上百个color theme中选择自己喜欢的theme时有用
+ cscope_maps.vim
+ cscope的vim插件,提供快捷键操纵cscope,好东东,如果你在用cscope的话
+ favex.vim
+ FavEx : Favorite file and directory explorer ,可以添加目录和文件到收藏夹，可以把
+ 经常编辑的文件添加到收藏夹来，在文件打开以后，\ff新增文件到收藏夹，\fd新增目录到收藏夹
+ lookupfile.vim
+ 五星级推荐的好插件!我觉得它是vim上最伟大的插件之一,提供多种方式查找文件,让你在复杂的目&frac14;树中也能轻松自如找到你要的文件
+ matchit.vim
+ 扩展了vim的%功能,让%可以匹配的,不再仅仅是括号,支持多种语言.必备插件之一
+ parenquote.vim
+ 给选中的文字加上引号,支持( { [ snippetEmu.vim
+ 扩展了vim的abbr缩写功能,支持占位符,支持变量换,强烈推荐
+ taglist.vim
+ vim的代码浏览器,生成函数列表,支持跳转,可以根据光标λ置查询到当前的函数名,使用vim的程序员必备!个人认为是最伟大的插件之一
+ utl.vim
+ 给vim增加url的识别功能,但是功能远不只是支持url,还有更多,详情见utl的帮助
+ vcscommand.vim
+ 给vim整合了cvs/subversion功能,不用离开vim环境也能执行常用的cvs/subversion操作了
+ viki.vim
+ vim的wiki,没怎么用过,据说很好用,详情可以看滇狐的主页
+ http://edyfox.codecarver.org/html/viki.html
+ vis.vim
+ 可以对选中的文本块执行ex操作,尤其是visual block模式下,vim自己是不支持的.选中后,
+ :B 加上ex命令
+ visincr.vim
+ 给vim增加生成递增或者递减数列的功能,支持十进制,十六进制,日期,星期等,功能强大灵活
+ winmanager.vim
+ 给vim增加IDE的功能,提供目录浏览和buffer浏览功能,因为显示器太小,感觉太占空间,所以单独使用bufexplorer,而且现在vim7的netrw功能也够强大,所以感觉比较鸡肋,而且貌似很久没有更新,所以基本不用
+ yankring.vim
+ 类似emacs的king ring,给vim的yank也增加缓冲,vim本身只缓冲删除的字符串,不缓冲yank
+ 的内容
+ 
+
+

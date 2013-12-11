@@ -188,8 +188,12 @@ endif
 " 设置编码
 set fenc=utf-8
 set encoding=utf-8
-set fileencodings=utf-8,gbk,cp936,latin-1
+set fileencodings=utf-8,korea,gbk,cp936,latin-1
 set fileencoding=utf-8
+"以下是为了支持韩文字体显示"
+"set guifont=GulimChe
+"设置bomb标志
+"set bomb
 
 
 "设置80列后显示为灰色

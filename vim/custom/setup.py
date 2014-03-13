@@ -1,4 +1,4 @@
-import os, zipfile, shutil, gzip, sys
+import os, zipfile, shutil, gzip, sys, platform
 
 
 def unzip(zip_path, save_path):

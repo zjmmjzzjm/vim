@@ -75,7 +75,7 @@ def install_vimball_plugin(vimballdir, vimroot):
 
 
 def install_helptags():
-    cmd = 'vim  -c ":helptags ~/.vim/doc" -c ":q!"'
+    cmd = 'vim  -c ":helptags ~/vimfiles/doc" -c ":q!"'
     os.system(cmd)
 
 
